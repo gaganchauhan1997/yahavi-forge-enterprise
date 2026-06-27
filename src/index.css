@@ -1,0 +1,111 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --brand-yellow: #FFD800;
+    --brand-yellow-light: #FFEA00;
+    --brand-yellow-dark: #E6C000;
+    --brand-pink: #FF2D55;
+    --brand-pink-deep: #CC1A48;
+    --brand-ink: #111111;
+    --brand-ink-soft: #3a3a3a;
+    --brand-ink-faint: #6b6b6b;
+    --brand-paper: #FAF6E9;
+    --brand-paper-warm: #F5EFE1;
+    --brand-lime: #B6FF39;
+    --brand-orange: #FF6B1A;
+    --background: 0 0% 100%;
+    --foreground: 0 0% 7%;
+    --card: 45 45% 95%;
+    --card-foreground: 0 0% 7%;
+    --popover: 45 45% 95%;
+    --popover-foreground: 0 0% 7%;
+    --primary: 50 100% 50%;
+    --primary-foreground: 0 0% 7%;
+    --secondary: 348 100% 58%;
+    --secondary-foreground: 45 45% 95%;
+    --muted: 45 30% 90%;
+    --muted-foreground: 0 0% 42%;
+    --accent: 45 45% 95%;
+    --accent-foreground: 0 0% 7%;
+    --destructive: 348 100% 58%;
+    --destructive-foreground: 45 45% 95%;
+    --border: 0 0% 7%;
+    --input: 0 0% 7%;
+    --ring: 50 100% 50%;
+    --radius: 0.5rem;
+    --font-display: 'Archivo Black', 'Inter', 'Helvetica Neue', Arial, sans-serif;
+    --font-body: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  }
+  .dark {
+    --background: 0 0% 7%;
+    --foreground: 45 45% 95%;
+    --card: 0 0% 12%;
+    --card-foreground: 45 45% 95%;
+    --popover: 0 0% 12%;
+    --popover-foreground: 45 45% 95%;
+    --primary: 50 100% 50%;
+    --primary-foreground: 0 0% 7%;
+    --secondary: 348 100% 58%;
+    --secondary-foreground: 45 45% 95%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 0 0% 15%;
+    --accent-foreground: 45 45% 95%;
+    --destructive: 348 100% 58%;
+    --destructive-foreground: 45 45% 95%;
+    --border: 45 45% 95%;
+    --input: 45 45% 95%;
+    --ring: 50 100% 50%;
+  }
+  * { border-color: hsl(var(--border)); }
+  body {
+    font-family: var(--font-body);
+    background: var(--brand-paper);
+    color: var(--brand-ink);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  ::selection { background: var(--brand-yellow); color: var(--brand-ink); }
+}
+
+@layer components {
+  .font-display { font-family: var(--font-display); }
+  .font-body { font-family: var(--font-body); }
+  .font-mono { font-family: var(--font-mono); }
+  .brand-border { border: 3px solid var(--brand-ink); }
+  .brand-border-thick { border: 4px solid var(--brand-ink); }
+  .brand-shadow { box-shadow: 6px 6px 0 var(--brand-ink); }
+  .brand-shadow-sm { box-shadow: 4px 4px 0 var(--brand-ink); }
+  .brand-shadow-pink { box-shadow: 6px 6px 0 var(--brand-pink); }
+  .brand-shadow-yellow { box-shadow: 6px 6px 0 var(--brand-yellow-dark); }
+  .brand-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 14px 24px;
+    font-family: var(--font-mono); font-size: 12px; font-weight: 800;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    border: 3px solid var(--brand-ink); cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s; text-decoration: none;
+  }
+  .brand-btn:hover { transform: translate(-2px, -2px); box-shadow: 5px 5px 0 var(--brand-ink); }
+  .brand-btn:active { transform: translate(0, 0); box-shadow: 2px 2px 0 var(--brand-ink); }
+  .brand-btn-primary { background: var(--brand-yellow); color: var(--brand-ink); }
+  .brand-btn-pink { background: var(--brand-pink); color: var(--brand-paper); }
+  .brand-btn-ghost { background: transparent; color: var(--brand-ink); }
+  .brand-btn-dark { background: var(--brand-ink); color: var(--brand-paper); }
+  .eyebrow { font-family: var(--font-mono); font-size: 10px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; }
+  .brand-panel { background: var(--brand-paper); border: 3px solid var(--brand-ink); box-shadow: 6px 6px 0 var(--brand-ink); }
+  .brand-panel-yellow { background: var(--brand-yellow); border: 3px solid var(--brand-ink); box-shadow: 6px 6px 0 var(--brand-ink); }
+  .brand-panel-pink { background: var(--brand-pink); border: 3px solid var(--brand-ink); box-shadow: 6px 6px 0 var(--brand-ink); color: var(--brand-paper); }
+  .brand-panel-dark { background: var(--brand-ink); border: 3px solid var(--brand-ink); box-shadow: 6px 6px 0 var(--brand-pink); color: var(--brand-paper); }
+}
+@layer utilities { .text-balance { text-wrap: balance; } }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(17,17,17,0.25); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(17,17,17,0.4); }

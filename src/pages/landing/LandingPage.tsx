@@ -1,29 +1,32 @@
-import HeroSection from './HeroSection';
-import ComparisonSection from './ComparisonSection';
-import HowItWorksSection from './HowItWorksSection';
-import ToolsPreviewSection from './ToolsPreviewSection';
-import PricingSection from './PricingSection';
-import TestimonialsSection from './TestimonialsSection';
-import FAQSection from './FAQSection';
-import FinalCTASection from './FinalCTASection';
-import LandingNav from './LandingNav';
-import LandingFooter from './LandingFooter';
+import { useEffect } from 'react'
+import LandingNav from './LandingNav'
+import HeroSection from './HeroSection'
+import ComparisonSection from './ComparisonSection'
+import HowItWorksSection from './HowItWorksSection'
+import ToolsPreviewSection from './ToolsPreviewSection'
+import PricingSection from './PricingSection'
+import TestimonialsSection from './TestimonialsSection'
+import FAQSection from './FAQSection'
+import FinalCTASection from './FinalCTASection'
+import LandingFooter from './LandingFooter'
+import YahaviChatbot from '@/components/chatbot/YahaviChatbot'
+import { useScrollReveal } from '@/hooks/useScrollReveal'
 
 export default function LandingPage() {
+  useScrollReveal()
   return (
-    <div className="min-h-screen bg-[#FAF6E9]">
+    <div className="bg-paper min-h-screen">
       <LandingNav />
-      <main>
-        <HeroSection />
-        <ComparisonSection />
-        <HowItWorksSection />
-        <ToolsPreviewSection />
-        <PricingSection />
-        <TestimonialsSection />
-        <FAQSection />
-        <FinalCTASection />
-      </main>
+      <HeroSection />
+      <ComparisonSection />
+      <HowItWorksSection />
+      <ToolsPreviewSection />
+      <PricingSection />
+      <TestimonialsSection />
+      <FAQSection />
+      <FinalCTASection />
       <LandingFooter />
+      <YahaviChatbot />
     </div>
-  );
+  )
 }

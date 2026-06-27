@@ -1,33 +1,31 @@
-import { CATEGORIES, TOOLS } from '@/data/tools';
-
-const categoryColorClass: Record<string, string> = {
-  build: 'bg-[#FFD800]', analyze: 'bg-[#B6FF39]', tailor: 'bg-[#FF2D55] text-[#FAF6E9]', outreach: 'bg-[#FF6B1A]', strategy: 'bg-[#111] text-[#FAF6E9]',
-};
-
+import { useState } from 'react'
+import { TOOLS, CATEGORIES } from '@/data/tools'
+import { Link } from 'react-router-dom'
 export default function ToolsPreviewSection() {
+  const [activecat, setActivecat] = useState('build')
+  const catTools = TOOLS.filter(t=>t.categoryId===activecat)
   return (
-    <section id="tools" className="px-4 sm:px-6 lg:px-8 py-16 border-t-2 border-[#111]">
-      <div className="max-w-[1180px] mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="font-display text-[clamp(24px,3vw,36px)] tracking-tight uppercase text-[#111]"><span className="text-[#FF2D55]">03</span> 17 tools, 5 categories</h2>
-          <span className="font-mono text-[11px] text-[#6b6b6b] tracking-widest uppercase">Every step of the job hunt</span>
-        </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-          {CATEGORIES.map((cat) => {
-            const catTools = TOOLS.filter((t) => t.categoryId === cat.id);
-            const colorClass = categoryColorClass[cat.id] || 'bg-[#FAF6E9]';
-            return (
-              <div key={cat.id} className={`brand-panel p-5 ${colorClass} relative overflow-hidden`}>
-                <h4 className="font-display text-lg uppercase tracking-tight pb-2 mb-3 border-b-2 border-current">{cat.label}</h4>
-                <ul className="space-y-1.5">
-                  {catTools.map((tool) => <li key={tool.id} className="font-mono text-[11px] tracking-wider py-1">{tool.num} {tool.title}</li>)}
-                </ul>
-                {cat.id === 'build' && <span className="absolute top-3 right-3 bg-[#B6FF39] text-[#111] font-mono text-[8px] font-black tracking-widest px-2 py-0.5 border-2 border-[#111] rounded-full">FREE TIER</span>}
-              </div>
-            );
-          })}
-        </div>
+    <section className="border-b-2 border-ink py-16 px-4 md:px-8 max-w-7xl mx-auto">
+      <div className="mb-8 reveal"><div className="brand-eyebrow">03 THE TOOLKIT</div>
+        <h2 className="font-display text-3xl uppercase tracking-tight">17 tools, 5 categories</h2></div>
+      <div className="flex gap-2 flex-wrap mb-6 reveal">
+        {CATEGORIES.map(c=><button key={c.id} onClick={()=>setActivecat(c.id)}
+          className={`brand-btn text-[10px] py-1.5 px-3 ${activecat===c.id?'brand-btn-dark':'brand-btn-ghost'}`}>
+          {c.icon} {c.label}</button>)}
+      </div>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {catTools.map((t,i)=>(
+          <Link key={t.id} to={`/app/${t.id}`}
+            className={`brand-panel p-4 hover:bg-yellow hover:border-ink transition-all no-underline reveal delay-${Math.min(i,4)+1}`}>
+            <div className="flex items-start justify-between mb-2">
+              <span className="font-mono text-[10px] text-muted">{t.num}</span>
+              {t.freeTier&&<span className="brand-tag brand-tag-green text-[8px]">FREE</span>}
+            </div>
+            <div className="font-bold text-sm mb-1">{t.title}</div>
+            <div className="text-xs text-muted">{t.subtitle}</div>
+          </Link>
+        ))}
       </div>
     </section>
-  );
+  )
 }

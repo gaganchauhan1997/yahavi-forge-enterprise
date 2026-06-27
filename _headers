@@ -1,0 +1,41 @@
+# Yahavi Forge — Cloudflare Pages security headers
+
+# Vite build output (hashed assets)
+/assets/*
+  Access-Control-Allow-Origin: https://forge.hackknow.com
+  Cross-Origin-Resource-Policy: same-site
+  Cache-Control: public, max-age=31536000, immutable
+
+# HTML pages
+/index.html
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Resource-Policy: same-origin
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self' https://ndrnrblhlkgugyvzsbba.supabase.co; upgrade-insecure-requests; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' https://checkout.razorpay.com; worker-src 'none'; manifest-src 'self'; connect-src 'self' https://ndrnrblhlkgugyvzsbba.supabase.co https://*.supabase.co https://api.groq.com https://generativelanguage.googleapis.com https://openrouter.ai/api https://api.together.xyz https://api.mistral.ai https://api.cohere.ai https://api.razorpay.com https://checkout.razorpay.com
+
+# Catch-all
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+  Cross-Origin-Opener-Policy: same-origin
+
+/robots.txt
+  Content-Type: text/plain; charset=utf-8
+  Cache-Control: public, max-age=86400
+
+/sitemap.xml
+  Content-Type: application/xml; charset=utf-8
+  Cache-Control: public, max-age=86400
+
+/manifest.json
+  Content-Type: application/manifest+json; charset=utf-8
+  Cache-Control: public, max-age=86400
+
+/.well-known/security.txt
+  Content-Type: text/plain; charset=utf-8

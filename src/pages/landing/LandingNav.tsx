@@ -1,59 +1,58 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router';
-import { useAuthCtx } from '@/providers/AuthProvider';
-import { Menu, X, Sun, Moon } from 'lucide-react';
+import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
+import { Menu, X } from 'lucide-react'
 
 export default function LandingNav() {
-  const { user, signIn, signOut } = useAuthCtx();
-  const [scrolled, setScrolled] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 80);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [theme, setTheme] = useState(localStorage.getItem('yahavi-forge-theme') || 'light')
 
   const toggleTheme = () => {
-    const next = theme === 'light' ? 'dark' : 'light';
-    setTheme(next);
-    document.documentElement.classList.toggle('dark', next === 'dark');
-  };
+    const next = theme === 'dark' ? 'light' : 'dark'
+    setTheme(next)
+    localStorage.setItem('yahavi-forge-theme', next)
+    document.documentElement.classList.toggle('dark', next === 'dark')
+  }
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark')
+  }, [theme])
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-[#FAF6E9]/95 backdrop-blur-md border-b-2 border-[#111]' : 'bg-transparent'}`}>
-      <div className="max-w-[1280px] mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-8 h-16">
-        <Link to="/" className="flex items-center gap-2 no-underline border-none">
-          <div className="w-8 h-8 bg-[#FFD800] border-2 border-[#111] flex items-center justify-center font-display text-sm font-black">Y</div>
-          <span className="font-display text-lg tracking-tight text-[#111]">YAHAVI <span className="bg-[#111] text-[#FAF6E9] px-1.5 py-0.5 text-xs ml-1">FORGE</span></span>
+    <nav className="sticky top-0 z-50 bg-paper border-b-2 border-ink">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 h-14 flex items-center justify-between gap-4">
+        {/* Brand */}
+        <Link to="/" className="flex items-center gap-2.5 no-underline border-none">
+          <div className="w-8 h-8 bg-yellow border-2 border-ink flex items-center justify-center font-display text-lg shadow-[2px_2px_0_#0A0A0A]">
+            Y
+          </div>
+          <span className="font-display text-sm uppercase tracking-tight">YAHAVI</span>
+          <span className="font-mono text-[9px] bg-ink text-paper px-1.5 py-0.5">FORGE</span>
         </Link>
+
+        {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-2">
-          <a href="#tools" className="font-mono text-[11px] font-bold tracking-widest uppercase text-[#111] px-3 py-2 hover:bg-[#FFD800] transition-colors no-underline">Tools</a>
-          <a href="#pricing" className="font-mono text-[11px] font-bold tracking-widest uppercase text-[#111] px-3 py-2 hover:bg-[#FFD800] transition-colors no-underline">Pricing</a>
-          <a href="#faq" className="font-mono text-[11px] font-bold tracking-widest uppercase text-[#111] px-3 py-2 hover:bg-[#FFD800] transition-colors no-underline">FAQ</a>
-          <Link to="/app" className="brand-btn brand-btn-primary ml-2 no-underline">Open App</Link>
-          {user ? (
-            <div className="flex items-center gap-2 ml-2">
-              <span className="font-mono text-[11px] text-[#6b6b6b]">{user.name}</span>
-              <button onClick={signOut} className="brand-btn brand-btn-ghost text-[10px] py-2 px-3">Sign Out</button>
-            </div>
-          ) : (
-            <button onClick={signIn} className="brand-btn brand-btn-pink ml-2 no-underline">Sign In</button>
-          )}
-          <button onClick={toggleTheme} className="ml-2 p-2 border-2 border-[#111] hover:bg-[#FFD800] transition-colors">{theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}</button>
+          <button onClick={toggleTheme} className="brand-btn brand-btn-ghost text-[10px] py-1.5 px-3" aria-label="Toggle theme">
+            {theme === 'dark' ? '☀' : '☾'}
+          </button>
+          <Link to="/login" className="brand-btn brand-btn-ghost text-[10px] py-1.5 px-3">▸ SIGN IN</Link>
+          <Link to="/login?mode=signup" className="brand-btn brand-btn-pink text-[10px] py-1.5 px-3">▸ SIGN UP — FREE</Link>
         </div>
-        <button onClick={() => setMobileOpen(!mobileOpen)} className="md:hidden w-10 h-10 bg-[#FFD800] border-2 border-[#111] flex items-center justify-center">{mobileOpen ? <X size={20} /> : <Menu size={20} />}</button>
+
+        {/* Mobile */}
+        <button onClick={() => setMenuOpen(!menuOpen)} className="md:hidden p-1" aria-label="Menu">
+          {menuOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
       </div>
-      {mobileOpen && (
-        <div className="md:hidden bg-[#FAF6E9] border-b-2 border-[#111] px-4 py-4 space-y-2">
-          <a href="#tools" onClick={() => setMobileOpen(false)} className="block font-mono text-xs font-bold tracking-widest uppercase py-2 border-none no-underline text-[#111]">Tools</a>
-          <a href="#pricing" onClick={() => setMobileOpen(false)} className="block font-mono text-xs font-bold tracking-widest uppercase py-2 border-none no-underline text-[#111]">Pricing</a>
-          <a href="#faq" onClick={() => setMobileOpen(false)} className="block font-mono text-xs font-bold tracking-widest uppercase py-2 border-none no-underline text-[#111]">FAQ</a>
-          <Link to="/app" onClick={() => setMobileOpen(false)} className="block brand-btn brand-btn-primary text-center no-underline">Open App</Link>
-          {user ? <button onClick={() => { signOut(); setMobileOpen(false); }} className="block w-full brand-btn brand-btn-ghost text-center">Sign Out</button> : <button onClick={() => { signIn(); setMobileOpen(false); }} className="block w-full brand-btn brand-btn-pink text-center">Sign In</button>}
+
+      {menuOpen && (
+        <div className="md:hidden border-t-2 border-ink bg-paper px-4 py-3 space-y-2">
+          <Link to="/login" className="brand-btn brand-btn-ghost w-full justify-center" onClick={() => setMenuOpen(false)}>▸ SIGN IN</Link>
+          <Link to="/login?mode=signup" className="brand-btn brand-btn-pink w-full justify-center" onClick={() => setMenuOpen(false)}>▸ SIGN UP — FREE</Link>
+          <button onClick={toggleTheme} className="brand-btn brand-btn-ghost w-full justify-center">
+            {theme === 'dark' ? '☀ Light mode' : '☾ Dark mode'}
+          </button>
         </div>
       )}
     </nav>
-  );
+  )
 }

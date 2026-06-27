@@ -1,83 +1,324 @@
-import { useState, useCallback } from 'react';
-import { getToolById } from '@/data/tools';
-import { callAI } from '@/lib/ai';
-import { ArrowLeft, Play, Copy, Check, FileText, Download, Loader2, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react'
+import { Copy, Check, Download, FileText, ArrowRight, Loader2, ChevronLeft, Star } from 'lucide-react'
+import { getToolById } from '@/data/tools'
+import { callAI } from '@/lib/ai'
+import { useKeys } from '@/hooks/useKeys'
+import { useDraft } from '@/hooks/useDraft'
+import { usePaywall } from '@/hooks/usePaywall'
+import PaywallModal from '@/components/ui/PaywallModal'
 
-interface Props { toolId: string; onBack: () => void; }
+interface ToolRunnerProps {
+  toolId: string
+  onBack: () => void
+}
 
-export default function ToolRunner({ toolId, onBack }: Props) {
-  const tool = getToolById(toolId);
-  const [inputs, setInputs] = useState<Record<string, string>>({});
-  const [chip, setChip] = useState('');
-  const [output, setOutput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [copied, setCopied] = useState(false);
-  const [provider, setProvider] = useState('');
+function mdToHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`\n]+)`/g, '<code style="background:rgba(0,0,0,0.1);padding:1px 5px;font-family:monospace;font-size:12px">$1</code>')
+    .replace(/^#{3} (.+)$/gm, '<h3 style="font-family:\'Archivo Black\',sans-serif;font-size:13px;text-transform:uppercase;letter-spacing:0.04em;margin:12px 0 6px">$1</h3>')
+    .replace(/^#{2} (.+)$/gm, '<h2 style="font-family:\'Archivo Black\',sans-serif;font-size:15px;text-transform:uppercase;letter-spacing:0.04em;margin:16px 0 8px;border-bottom:2px solid currentColor;padding-bottom:4px">$1</h2>')
+    .replace(/^#{1} (.+)$/gm, '<h1 style="font-family:\'Archivo Black\',sans-serif;font-size:18px;text-transform:uppercase;letter-spacing:-0.01em;margin:18px 0 10px">$1</h1>')
+    .replace(/^[-*•] (.+)$/gm, '<div style="display:flex;gap:8px;margin:4px 0"><span style="font-weight:900">▸</span><span>$1</span></div>')
+    .replace(/\n\n/g, '<br/><br/>')
+    .replace(/\n/g, '<br/>')
+}
 
-  const handleInputChange = (id: string, value: string) => setInputs((p) => ({ ...p, [id]: value }));
+export default function ToolRunner({ toolId, onBack }: ToolRunnerProps) {
+  const tool = getToolById(toolId)
+  const { hasAnyKey } = useKeys()
+  const { loadDraft, saveDraft } = useDraft(toolId)
+  const { canExport, canExportClean, guard } = usePaywall()
 
-  const handleRun = useCallback(async () => {
-    if (!tool) return;
-    setLoading(true); setError(''); setOutput('');
+  const [inputs, setInputs] = useState<Record<string, string>>(loadDraft)
+  const [chip, setChip] = useState<string>(tool?.chips?.options[0]?.value ?? '')
+  const [output, setOutput] = useState('')
+  const [provider, setProvider] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [copied, setCopied] = useState(false)
+  const [showPaywall, setShowPaywall] = useState(false)
+  const [paywallAction, setPaywallAction] = useState('export')
+  const [runCount, setRunCount] = useState(0)
+  const outputRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (tool) setInputs(loadDraft())
+  }, [toolId])
+
+  if (!tool) return (
+    <div className="p-8 text-center">
+      <p className="font-mono text-muted">Tool not found: {toolId}</p>
+      <button onClick={onBack} className="brand-btn brand-btn-ghost mt-4">← Back</button>
+    </div>
+  )
+
+  const updateInput = (id: string, val: string) => {
+    const next = { ...inputs, [id]: val }
+    setInputs(next)
+    saveDraft(next)
+  }
+
+  const handleRun = async () => {
+    const required = tool.inputs.filter((i) => i.required)
+    const missing = required.find((i) => !inputs[i.id]?.trim())
+    if (missing) { setError(`Please fill in: ${missing.label}`); return }
+    if (tool.requiresKey && !hasAnyKey) {
+      setError('No API key found. Click ▸ KEYS in the header to add a free Groq key.')
+      return
+    }
+    setLoading(true); setError(''); setOutput('')
     try {
-      const keys = JSON.parse(localStorage.getItem('yforge-keys') || '{}');
-      if (tool.requiresKey && Object.keys(keys).length === 0) throw new Error('No API keys configured. Click the KEYS button to add one.');
-      const messages = [{ role: 'system' as const, content: tool.systemPrompt(chip) }, { role: 'user' as const, content: tool.userPrompt(inputs, chip) }];
-      const result = await callAI(keys, messages, { temperature: tool.temperature, max_tokens: tool.maxTokens });
-      setOutput(result.text); setProvider(result.provider);
-    } catch (err: any) { setError(err.message || 'Something went wrong. Please try again.'); } finally { setLoading(false); }
-  }, [tool, inputs, chip]);
+      const messages = [
+        { role: 'system' as const, content: tool.systemPrompt(chip) },
+        { role: 'user' as const, content: tool.userPrompt(inputs, chip) },
+      ]
+      const result = await callAI(messages, { temperature: tool.temperature, max_tokens: tool.maxTokens })
+      setOutput(result.text)
+      setProvider(result.provider)
+      setRunCount((c) => c + 1)
+    } catch (e) {
+      setError((e as { message?: string }).message ?? 'AI call failed')
+    } finally {
+      setLoading(false)
+    }
+  }
 
-  const handleCopy = () => { navigator.clipboard.writeText(output); setCopied(true); setTimeout(() => setCopied(false), 2000); };
+  const handleCopy = () => {
+    navigator.clipboard.writeText(output).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500) })
+  }
+
+  const handleTXT = () => {
+    const blob = new Blob([output], { type: 'text/plain' })
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob)
+    a.download = `${tool.id}-${Date.now()}.txt`; a.click()
+    setTimeout(() => URL.revokeObjectURL(a.href), 3000)
+  }
 
   const handlePDF = () => {
-    const w = window.open('', '_blank'); if (!w) return;
-    w.document.write(`<!doctype html><meta charset="utf-8"><title>${tool?.title} — Yahavi Forge</title><style>body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;max-width:780px;margin:32px auto;padding:0 16px;line-height:1.55;color:#111;background:#FAF6E9}h1,h2,h3{font-family:'Archivo Black',sans-serif;text-transform:uppercase;letter-spacing:-.01em}strong{background:#FFD800;padding:0 3px}code{font-family:'JetBrains Mono',monospace;background:#111;color:#FAF6E9;padding:1px 5px}@media print{body{margin:0;padding:0 24px}button{display:none}}</style><h1>${tool?.title}</h1><p style="color:#6b6b6b;font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.1em;">Yahavi Forge by Hackknow · ${new Date().toLocaleDateString()}</p><hr style="border:none;border-top:2px solid #111;margin:16px 0"><div style="white-space:pre-wrap;font-size:14px;line-height:1.7">${output.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div><script>setTimeout(()=>window.print(),300)<\/script>`);
-  };
+    if (!guard('pdf')) { setPaywallAction('pdf'); setShowPaywall(true); return }
+    const w = window.open('', '_blank')
+    if (!w) return
+    w.document.write(`<!doctype html><html><head><title>${tool.title} — Yahavi Forge</title>
+      <style>body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;max-width:800px;margin:32px auto;padding:0 24px;color:#0A0A0A;line-height:1.6}
+      h1,h2,h3{font-family:'Archivo Black',sans-serif;text-transform:uppercase;letter-spacing:-.01em}
+      strong{background:#FFE500;padding:0 3px}code{font-family:monospace;background:#eee;padding:1px 4px}
+      @media print{body{margin:0}button{display:none}}</style></head>
+      <body><h1>${tool.title}</h1><hr/>
+      ${mdToHtml(output)}<hr/>
+      <p style="font-size:10px;color:#888;font-family:monospace">Generated by Yahavi Forge · forge.hackknow.com · via ${provider}</p>
+      <script>setTimeout(()=>window.print(),300)</script></body></html>`)
+  }
 
-  if (!tool) return <div className="p-8 text-center"><p className="font-mono text-sm text-[#6b6b6b]">Unknown tool: {toolId}</p><button onClick={onBack} className="brand-btn brand-btn-primary mt-4">Go Back</button></div>;
+  const handleHTML = () => {
+    if (!guard('html')) { setPaywallAction('html'); setShowPaywall(true); return }
+    const blob = new Blob([`<!doctype html><html><head><title>${tool.title}</title>
+      <style>body{font-family:system-ui,sans-serif;max-width:800px;margin:32px auto;padding:0 24px}</style></head>
+      <body>${mdToHtml(output)}</body></html>`], { type: 'text/html' })
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob)
+    a.download = `${tool.id}.html`; a.click()
+  }
+
+  const handlePush = () => {
+    if (!guard('push')) { setPaywallAction('push'); setShowPaywall(true); return }
+    try {
+      const list = JSON.parse(localStorage.getItem('yahavi-forge-resumes') || '[]') as unknown[]
+      list.unshift({ id: `r_${Date.now()}`, title: `${tool.title} · ${new Date().toLocaleDateString()}`, source_tool: toolId, content: output, created_at: new Date().toISOString() })
+      localStorage.setItem('yahavi-forge-resumes', JSON.stringify(list.slice(0, 50)))
+    } catch {}
+  }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-[1100px]">
-      <div className="flex items-center gap-3 mb-6">
-        <button onClick={onBack} className="w-9 h-9 flex items-center justify-center border-2 border-[#111] hover:bg-[#FFD800] transition-colors"><ArrowLeft size={16} /></button>
+    <div className="p-4 md:p-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-5">
+        <button onClick={onBack} className="p-1.5 hover:bg-yellow border-2 border-transparent hover:border-ink transition-all" aria-label="Back">
+          <ChevronLeft size={18} />
+        </button>
         <div>
-          <div className="font-display text-xl uppercase tracking-tight flex items-center gap-2"><span>{tool.icon}</span>{tool.title}</div>
-          <p className="font-mono text-[10px] text-[#6b6b6b] tracking-widest uppercase">{tool.subtitle}</p>
-        </div>
-        <div className="ml-auto flex items-center gap-2">
-          {tool.freeTier && <span className="font-mono text-[8px] font-bold bg-[#B6FF39] text-[#111] px-2 py-1 border-2 border-[#111]">FREE TIER</span>}
-          <span className="font-mono text-[9px] font-bold tracking-widest uppercase text-[#6b6b6b] bg-[#FAF6E9] border border-[#111] px-2 py-1">{tool.num}</span>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-xs text-muted">{tool.num}</span>
+            <h1 className="font-display text-xl uppercase tracking-tight">{tool.title}</h1>
+            {tool.freeTier && <span className="brand-tag brand-tag-green text-[9px]">FREE</span>}
+          </div>
+          <p className="text-sm text-muted mt-0.5">{tool.subtitle}</p>
         </div>
       </div>
+
+      {/* Chips */}
       {tool.chips && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          {tool.chips.options.map((opt) => <button key={opt.value} onClick={() => setChip(opt.value)} className={`px-3 py-1.5 font-mono text-[10px] font-bold tracking-widest uppercase border-2 transition-all ${chip === opt.value ? 'bg-[#111] text-[#FAF6E9] border-[#111]' : 'bg-transparent text-[#111] border-[#111] hover:bg-[#FFD800]'}`}>{opt.label}</button>)}
+        <div className="flex gap-2 mb-4 flex-wrap">
+          {tool.chips.options.map((o) => (
+            <button
+              key={o.value}
+              onClick={() => setChip(o.value)}
+              className={`brand-btn text-[10px] py-1.5 px-3 ${chip === o.value ? 'brand-btn-dark' : 'brand-btn-ghost'}`}
+            >
+              {o.label}
+            </button>
+          ))}
         </div>
       )}
+
+      {/* 2-col grid */}
       <div className="grid lg:grid-cols-2 gap-4">
-        <div className="brand-panel p-5">
-          <div className="flex items-center justify-between mb-4 pb-2 border-b-2 border-[#111]"><span className="font-mono text-[10px] font-bold tracking-[0.2em] uppercase">INPUT</span><span className="font-mono text-[9px] font-bold bg-[#FF2D55] text-[#FAF6E9] px-1.5 py-0.5">RAW</span></div>
-          <div className="space-y-4">
-            {tool.inputs.map((inp) => (
-              <div key={inp.id}>
-                <label className="block font-body text-[13px] font-semibold mb-1.5">{inp.label}{inp.required && <span className="text-[#FF2D55] ml-1">*</span>}</label>
-                {inp.type === 'textarea' ? <textarea value={inputs[inp.id] || ''} onChange={(e) => handleInputChange(inp.id, e.target.value)} placeholder={inp.placeholder} rows={inp.rows || 6} className="w-full p-3 border-2 border-[#111] bg-white font-body text-[13px] focus:outline-none focus:shadow-[3px_3px_0_#111] transition-shadow resize-y" /> :
-                 <input type="text" value={inputs[inp.id] || ''} onChange={(e) => handleInputChange(inp.id, e.target.value)} placeholder={inp.placeholder} className="w-full p-3 border-2 border-[#111] bg-white font-body text-[13px] focus:outline-none focus:shadow-[3px_3px_0_#111] transition-shadow" />}
-              </div>
-            ))}
+        {/* Input panel */}
+        <div className="brand-panel p-4 space-y-4">
+          <div className="flex items-center justify-between border-b-2 border-ink pb-2">
+            <span className="brand-tag">▸ INPUT</span>
+            <span className="brand-tag bg-paper border-ink text-ink">RAW</span>
           </div>
-          <button onClick={handleRun} disabled={loading} className="brand-btn brand-btn-primary w-full justify-center mt-4 text-[12px] py-3.5 disabled:opacity-50">{loading ? <><Loader2 size={16} className="animate-spin" /> Forging...</> : <><Play size={16} /> RUN {tool.title.toUpperCase()}</>}</button>
-          {error && <div className="mt-3 p-3 border-2 border-[#FF2D55] bg-[#FF2D55]/10 flex items-start gap-2"><AlertCircle size={16} className="text-[#FF2D55] flex-shrink-0 mt-0.5" /><span className="font-mono text-[11px] text-[#FF2D55]">{error}</span></div>}
+          {tool.inputs.map((inp) => (
+            <div key={inp.id}>
+              <label className="block font-mono text-[10px] font-bold uppercase tracking-wider mb-1.5">
+                {inp.label}{inp.required && <span className="text-pink ml-1">*</span>}
+              </label>
+              {inp.type === 'textarea' ? (
+                <textarea
+                  value={inputs[inp.id] ?? ''}
+                  onChange={(e) => updateInput(inp.id, e.target.value)}
+                  rows={inp.rows ?? 6}
+                  placeholder={inp.placeholder}
+                  className="brand-textarea"
+                />
+              ) : inp.type === 'select' ? (
+                <select
+                  value={inputs[inp.id] ?? ''}
+                  onChange={(e) => updateInput(inp.id, e.target.value)}
+                  className="brand-input"
+                >
+                  <option value="">Select...</option>
+                  {inp.options?.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  value={inputs[inp.id] ?? ''}
+                  onChange={(e) => updateInput(inp.id, e.target.value)}
+                  placeholder={inp.placeholder}
+                  className="brand-input"
+                />
+              )}
+            </div>
+          ))}
+
+          {error && (
+            <div className="bg-pink/10 border-2 border-pink px-3 py-2 text-sm text-pink font-mono">
+              ⚠ {error}
+            </div>
+          )}
+
+          <button
+            onClick={() => void handleRun()}
+            disabled={loading}
+            className="brand-btn brand-btn-primary w-full justify-center py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? <><Loader2 size={14} className="animate-spin" /> Running…</> : `▸ RUN ${tool.title.toUpperCase()}`}
+          </button>
         </div>
-        <div className="brand-panel-dark p-5">
-          <div className="flex items-center justify-between mb-4 pb-2 border-b-2 border-[#FFD800]/30"><span className="font-mono text-[10px] font-bold tracking-[0.2em] uppercase text-[#FFD800]">OUTPUT</span><span className="font-mono text-[9px] font-bold bg-[#FFD800] text-[#111] px-1.5 py-0.5">FORGED</span></div>
-          {!output && !loading && <div className="font-mono text-[12px] text-[#FAF6E9]/40 tracking-widest uppercase border-2 border-dashed border-[#FAF6E9]/20 p-10 text-center">Click RUN to generate</div>}
-          {loading && !output && <div className="flex items-center justify-center p-10"><div className="flex items-center gap-2"><Loader2 size={20} className="text-[#FFD800] animate-spin" /><span className="font-mono text-[12px] text-[#FAF6E9]/60 tracking-widest uppercase animate-pulse">Forging with AI...</span></div></div>}
-          {output && <div><div className="font-mono text-[9px] tracking-[0.15em] uppercase text-[#FAF6E9]/40 mb-3 pb-2 border-b border-dotted border-[#FAF6E9]/20">Generated via {provider} · {(output.length / 1024).toFixed(1)}KB</div><div className="bg-[#FAF6E9] text-[#111] p-4 font-body text-[13px] leading-relaxed max-h-[500px] overflow-y-auto whitespace-pre-wrap border-2 border-[#111]">{output}</div><div className="flex flex-wrap gap-2 mt-3"><button onClick={handleCopy} className="brand-btn brand-btn-primary text-[10px] py-2 px-3">{copied ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy</>}</button><button onClick={handlePDF} className="brand-btn brand-btn-ghost text-[#FAF6E9] border-[#FAF6E9] text-[10px] py-2 px-3 hover:bg-[#FFD800] hover:text-[#111] hover:border-[#111]"><FileText size={12} /> PDF</button><button onClick={() => { const blob = new Blob([output], { type: 'text/plain' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `yahavi-${toolId}.txt`; a.click(); }} className="brand-btn brand-btn-ghost text-[#FAF6E9] border-[#FAF6E9] text-[10px] py-2 px-3 hover:bg-[#FFD800] hover:text-[#111] hover:border-[#111]"><Download size={12} /> TXT</button></div></div>}
+
+        {/* Output panel */}
+        <div className="brand-panel-dark p-4 flex flex-col min-h-[400px]">
+          <div className="flex items-center justify-between border-b-2 border-paper/20 pb-2 mb-3">
+            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-paper/60">▸ OUTPUT</span>
+            <span className="font-mono text-[10px] text-paper/40">FORGED</span>
+          </div>
+
+          <div
+            ref={outputRef}
+            className="flex-1 text-sm text-paper leading-relaxed overflow-y-auto"
+            style={{ minHeight: '300px' }}
+          >
+            {output ? (
+              <div dangerouslySetInnerHTML={{ __html: mdToHtml(output) }} />
+            ) : loading ? (
+              <div className="flex items-center gap-3 text-paper/50 mt-8">
+                <Loader2 size={18} className="animate-spin" />
+                <span className="font-mono text-xs">Generating…</span>
+              </div>
+            ) : (
+              <div className="text-paper/30 font-mono text-xs mt-8">
+                ▸ Click RUN to generate output
+              </div>
+            )}
+          </div>
+
+          {output && (
+            <>
+              {provider && (
+                <p className="font-mono text-[9px] text-paper/30 mt-2">via {provider}</p>
+              )}
+              {/* Export buttons */}
+              <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-paper/10">
+                <button onClick={handleCopy} className="brand-btn border-paper/30 text-paper hover:bg-paper/10 text-[10px] py-1.5 px-3">
+                  {copied ? <><Check size={11} /> Copied</> : <><Copy size={11} /> Copy</>}
+                </button>
+                <button onClick={handleTXT} className="brand-btn border-paper/30 text-paper hover:bg-paper/10 text-[10px] py-1.5 px-3">
+                  <Download size={11} /> TXT
+                </button>
+                <button
+                  onClick={handlePDF}
+                  className={`brand-btn text-[10px] py-1.5 px-3 ${canExport() ? 'brand-btn-primary' : 'border-paper/30 text-paper/50'}`}
+                >
+                  <FileText size={11} /> PDF {!canExport() && '↗'}
+                </button>
+                <button
+                  onClick={handleHTML}
+                  className={`brand-btn text-[10px] py-1.5 px-3 ${canExport() ? 'brand-btn-primary' : 'border-paper/30 text-paper/50'}`}
+                >
+                  {'<>'} HTML {!canExport() && '↗'}
+                </button>
+                {tool.hasPushToResume && (
+                  <button
+                    onClick={handlePush}
+                    className={`brand-btn text-[10px] py-1.5 px-3 ${canExportClean() ? 'brand-btn-pink' : 'border-paper/30 text-paper/50'}`}
+                  >
+                    <ArrowRight size={11} /> Push {!canExportClean() && '↗'}
+                  </button>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
+
+      {/* Reviews section */}
+      {runCount >= 1 && output && (
+        <div className="mt-6 brand-panel p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Star size={14} className="text-yellow fill-yellow" />
+            <span className="font-mono text-[10px] font-bold uppercase tracking-wider">Rate this tool</span>
+          </div>
+          <div className="flex gap-1">
+            {[1,2,3,4,5].map((n) => (
+              <button
+                key={n}
+                className="text-2xl hover:scale-110 transition-transform text-ink/20 hover:text-yellow"
+                onClick={() => {
+                  const comment = prompt('Optional comment:') ?? ''
+                  try {
+                    const key = `yahavi-forge-tool-reviews-${toolId}`
+                    const list = JSON.parse(localStorage.getItem(key) || '[]') as unknown[]
+                    list.unshift({ rating: n, comment, date: new Date().toISOString() })
+                    localStorage.setItem(key, JSON.stringify(list))
+                    alert('Thanks for your review! ⭐')
+                  } catch {}
+                }}
+              >★</button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Paywall modal */}
+      {showPaywall && (
+        <PaywallModal
+          action={paywallAction}
+          onClose={() => setShowPaywall(false)}
+          onUnlock={() => setShowPaywall(false)}
+        />
+      )}
     </div>
-  );
+  )
 }

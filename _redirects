@@ -1,0 +1,13 @@
+# Yahavi Forge — Cloudflare Pages SPA redirects
+
+# Probe paths → 404
+/.env         /404.html  404
+/.git/*       /404.html  404
+/package.json /404.html  404
+/yarn.lock    /404.html  404
+
+# Billing Worker proxy (set actual worker URL after deploying)
+# /api/billing/*  https://yahavi-billing.YOUR_SUBDOMAIN.workers.dev/:splat  200
+
+# SPA catch-all — MUST be last line
+/*  /index.html  200

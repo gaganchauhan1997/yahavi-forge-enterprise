@@ -1,35 +1,32 @@
-import { useAuthCtx } from '@/providers/AuthProvider';
-import { Check, Star } from 'lucide-react';
-
-const plans = [
-  { name: 'FREE', price: '₹0', color: 'bg-[#FAF6E9]', meta: 'BUILD category · with watermark', features: ['5 AI Resume tools', 'ATS local scorer (no key needed)', 'Watermarked exports', 'Community support'] },
-  { name: 'DAY PASS', price: '₹49', color: 'bg-[#B6FF39]', meta: 'All 17 tools · 24h · no watermark', features: ['All 17 tools unlocked', 'No watermark', 'Unlimited generations', 'All export formats'] },
-  { name: 'ALL TOOLS', price: '₹249', period: '/mo', color: 'bg-[#FFD800]', meta: '17 tools · everything unlocked', featured: true, features: ['All 17 tools', 'No watermark', 'Unlimited generations', 'Portfolio themes', 'Priority support'] },
-  { name: 'YEARLY', price: '₹2,499', period: '/yr', color: 'bg-[#111] text-[#FAF6E9]', meta: '~₹208/mo · save 17%', features: ['Everything in Monthly', 'Save 17%', 'Early access to new tools', '1-on-1 resume review'] },
-];
-
+import { Link } from 'react-router-dom'
+const plans=[
+  {n:'FREE',p:'₹0',per:'forever',f:['BUILD category (5 tools)','Local ATS scorer — no key needed','Unlimited outputs','Small watermark on exports','Community support'],cta:'Get Started',link:'/login?mode=signup',feat:false},
+  {n:'DAY PASS',p:'₹49',per:'24 hours · all tools',f:['All 17 tools unlocked','No watermark on exports','Unlimited generations','All export formats','Perfect for sprint applying'],cta:'Buy Day Pass',link:'/login?mode=signup&plan=day',feat:false},
+  {n:'ALL TOOLS',p:'₹249',per:'/month · best value',f:['All 17 tools, every day','No watermark on any export','Priority AI routing','Cloud sync (coming soon)','Cancel anytime'],cta:'Go Monthly',link:'/login?mode=signup&plan=monthly',feat:true},
+  {n:'YEARLY',p:'₹2,499',per:'/yr · save 17%',f:['Everything in Monthly','Save 17% vs monthly','Early access to new tools','1-on-1 resume review'],cta:'Go Yearly',link:'/login?mode=signup&plan=yearly',feat:false},
+]
 export default function PricingSection() {
-  const { signIn } = useAuthCtx();
   return (
-    <section id="pricing" className="px-4 sm:px-6 lg:px-8 py-16 border-t-2 border-[#111]">
-      <div className="max-w-[1180px] mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="font-display text-[clamp(24px,3vw,36px)] tracking-tight uppercase text-[#111]"><span className="text-[#FF2D55]">04</span> Pricing</h2>
-          <span className="font-mono text-[11px] text-[#6b6b6b] tracking-widest uppercase">Honest. Pick what fits.</span>
-        </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {plans.map((plan) => (
-            <div key={plan.name} className={`brand-border p-6 ${plan.color} relative transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[8px_8px_0_#111]`}>
-              {plan.featured && <div className="absolute -top-3 right-3 bg-[#FF2D55] text-[#FAF6E9] font-mono text-[9px] font-black tracking-[0.12em] px-2.5 py-1 border-2 border-[#111] brand-shadow-sm">★ MOST POPULAR</div>}
-              <div className="font-mono text-[10px] font-bold tracking-[0.18em] uppercase mb-2 opacity-85">{plan.name}</div>
-              <div className="font-display text-[clamp(32px,4vw,44px)] leading-none tracking-tight mb-1.5">{plan.price}{plan.period && <span className="font-mono text-sm opacity-70 tracking-wide ml-1">{plan.period}</span>}</div>
-              <p className="font-body text-xs leading-snug opacity-80 mb-4">{plan.meta}</p>
-              <ul className="space-y-2">{plan.features.map((f, i) => <li key={i} className="flex items-start gap-2 text-xs"><Check size={14} className="mt-0.5 flex-shrink-0" />{f}</li>)}</ul>
-              <button onClick={signIn} className={`brand-btn w-full justify-center mt-4 text-[11px] py-3 ${plan.name === 'FREE' ? 'brand-btn-primary' : plan.name === 'YEARLY' ? 'brand-btn-primary text-[#111]' : 'brand-btn-dark'}`}><Star size={14} /> Get Started</button>
-            </div>
-          ))}
-        </div>
+    <section className="border-b-2 border-ink py-16 px-4 md:px-8 max-w-7xl mx-auto">
+      <div className="mb-10 reveal"><div className="brand-eyebrow">04 PRICING</div>
+        <h2 className="font-display text-3xl uppercase tracking-tight">Honest. Pick what fits.</h2></div>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {plans.map((p,i)=>(
+          <div key={p.n} className={`flex flex-col border-2 border-ink p-5 reveal delay-${i+1} ${p.feat?'bg-yellow brand-shadow-pink':''}`}>
+            {p.feat&&<div className="font-mono text-[9px] font-bold uppercase tracking-widest text-pink mb-2">★ MOST POPULAR</div>}
+            <div className="font-display text-xs uppercase tracking-wider mb-1">{p.n}</div>
+            <div className="font-display text-3xl mb-0.5">{p.p}</div>
+            <div className="font-mono text-[10px] text-muted mb-4">{p.per}</div>
+            <ul className="space-y-1.5 flex-1 mb-5">{p.f.map(f=><li key={f} className="flex gap-2 text-xs"><span className="font-bold">✅</span>{f}</li>)}</ul>
+            <Link to={p.link} className={`brand-btn justify-center text-[10px] py-2.5 ${p.feat?'brand-btn-dark':'brand-btn-ghost'}`}>{p.cta}</Link>
+          </div>
+        ))}
+      </div>
+      <div className="mt-6 text-sm text-muted font-mono space-y-1 reveal">
+        <div>🎓 Student 80% off: upload graduation or 12th marksheet → 20% of the price</div>
+        <div>👋 Beginner free month: first-time job seekers get 30 days free</div>
+        <div>🏢 Enterprise: custom — <a href="mailto:team@hackknow.com" className="underline">team@hackknow.com</a></div>
       </div>
     </section>
-  );
+  )
 }
